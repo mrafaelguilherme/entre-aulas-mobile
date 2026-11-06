@@ -1,0 +1,15 @@
+node_modules/
+dist/
+coverage/
+.env
+.env.local
+*.log
+*.tsbuildinfo
+.DS_Store
+Thumbs.db
+
+# Arquivos locais, fora da entrega
+*.pdf
+.superpowers/
+docs/superpowers/
+.expo/
