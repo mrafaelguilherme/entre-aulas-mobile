@@ -2,7 +2,7 @@ import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { JwtModule } from '@nestjs/jwt';
 import { MongooseModule } from '@nestjs/mongoose';
-import { validateEnvironment } from './config/env.validation';
+import { envSchema } from './config/env.validation';
 import { PostModule } from './posts/post.module';
 import { TeacherModule } from './teachers/teacher.module';
 
@@ -10,7 +10,7 @@ import { TeacherModule } from './teachers/teacher.module';
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
-      validate: validateEnvironment,
+      validationSchema: envSchema,
     }),
     MongooseModule.forRootAsync({
       inject: [ConfigService],
