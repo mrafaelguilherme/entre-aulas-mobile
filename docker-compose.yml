@@ -1,0 +1,36 @@
+name: entre-aulas-mobile
+
+services:
+  mongo:
+    image: mongo:8.0
+    restart: unless-stopped
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_USER:?rode node scripts/setup-env.mjs}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_PASSWORD:?rode node scripts/setup-env.mjs}
+    volumes:
+      - mongo-data:/data/db
+    healthcheck:
+      test: ['CMD', 'mongosh', '--quiet', '--eval', 'db.adminCommand("ping")']
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  api:
+    build: ./api
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      MONGO_URI: mongodb://${MONGO_USER}:${MONGO_PASSWORD}@mongo:27017/entre-aulas?authSource=admin
+      JWT_SECRET: ${JWT_SECRET:?rode node scripts/setup-env.mjs}
+      MASTER_EMAIL: ${MASTER_EMAIL:?rode node scripts/setup-env.mjs}
+      MASTER_PASSWORD: ${MASTER_PASSWORD:?rode node scripts/setup-env.mjs}
+      ENABLE_API_DOCS: ${ENABLE_API_DOCS:-false}
+    ports:
+      - '3000:3000'
+    depends_on:
+      mongo:
+        condition: service_healthy
+
+volumes:
+  mongo-data:
