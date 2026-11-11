@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { QueryFilter, Model } from 'mongoose';
-import { Paginated } from '../../../../shared/pagination/pagination';
+import { Paginated } from '../../../shared/pagination/pagination';
 import { IUser, UserRole } from '../../models/user.interface';
 import { User, UserDocument } from '../../schemas/user.schema';
 import {

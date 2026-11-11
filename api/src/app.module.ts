@@ -1,11 +1,15 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
+import { APP_GUARD } from '@nestjs/core';
 import { JwtModule } from '@nestjs/jwt';
 import { MongooseModule } from '@nestjs/mongoose';
+import { AuthModule } from './auth/auth.module';
+import { jwtOptions } from './auth/jwt.options';
 import { envSchema } from './config/env.validation';
 import { PostModule } from './posts/post.module';
-import { TeacherModule } from './teachers/teacher.module';
-import { UsersModule } from './shared/users/users.module';
+import { AuthGuard } from './shared/guards/auth.guard';
+import { RolesGuard } from './shared/guards/roles.guard';
+import { UsersModule } from './users/users.module';
 
 @Module({
   imports: [
@@ -22,14 +26,16 @@ import { UsersModule } from './shared/users/users.module';
     JwtModule.registerAsync({
       global: true,
       inject: [ConfigService],
-      useFactory: (configService: ConfigService) => ({
-        secret: configService.getOrThrow<string>('JWT_SECRET'),
-        signOptions: { expiresIn: '8h' },
-      }),
+      useFactory: jwtOptions,
     }),
     UsersModule,
+    AuthModule,
     PostModule,
-    TeacherModule,
+  ],
+  providers: [
+    // Guards globais, nesta ordem: primeiro quem e voce, depois o que pode.
+    { provide: APP_GUARD, useClass: AuthGuard },
+    { provide: APP_GUARD, useClass: RolesGuard },
   ],
 })
 export class AppModule {}

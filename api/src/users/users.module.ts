@@ -1,6 +1,6 @@
 import { Module } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
-import { PasswordService } from '../../shared/security/password.service';
+import { PasswordService } from '../shared/security/password.service';
 import { UserMongooseRepository } from './repositories/mongoose/user.mongoose.repository';
 import { UserRepository } from './repositories/user.repository';
 import { User, UserSchema } from './schemas/user.schema';

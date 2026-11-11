@@ -1,4 +1,4 @@
-import { Paginated } from '../../../shared/pagination/pagination';
+import { Paginated } from '../../shared/pagination/pagination';
 import { IUser, UserRole, UserStatus } from '../models/user.interface';
 
 export type CreateUserInput = Pick<
