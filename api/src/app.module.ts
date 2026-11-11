@@ -5,6 +5,7 @@ import { MongooseModule } from '@nestjs/mongoose';
 import { envSchema } from './config/env.validation';
 import { PostModule } from './posts/post.module';
 import { TeacherModule } from './teachers/teacher.module';
+import { UsersModule } from './shared/users/users.module';
 
 @Module({
   imports: [
@@ -26,6 +27,7 @@ import { TeacherModule } from './teachers/teacher.module';
         signOptions: { expiresIn: '8h' },
       }),
     }),
+    UsersModule,
     PostModule,
     TeacherModule,
   ],
