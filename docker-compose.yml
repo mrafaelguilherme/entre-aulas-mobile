@@ -17,6 +17,7 @@ services:
 
   api:
     build: ./api
+    image: entre-aulas-api
     restart: unless-stopped
     environment:
       NODE_ENV: production
@@ -31,6 +32,23 @@ services:
     depends_on:
       mongo:
         condition: service_healthy
+
+  # Roda uma vez, depois que a API responde, e cria os dados de demonstracao.
+  seed:
+    image: node:24-alpine
+    working_dir: /seed
+    volumes:
+      - ./scripts:/seed:ro
+    command: ['node', 'seed.mjs']
+    environment:
+      API_URL: http://api:3000
+      MASTER_EMAIL: ${MASTER_EMAIL:?rode node scripts/setup-env.mjs}
+      MASTER_PASSWORD: ${MASTER_PASSWORD:?rode node scripts/setup-env.mjs}
+      SEED_PASSWORD: ${SEED_PASSWORD:?rode node scripts/setup-env.mjs}
+    depends_on:
+      api:
+        condition: service_healthy
+    restart: 'no'
 
 volumes:
   mongo-data:
