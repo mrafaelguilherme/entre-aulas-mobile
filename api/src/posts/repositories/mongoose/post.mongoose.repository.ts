@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { isValidObjectId, Model } from 'mongoose';
+import { Model, QueryFilter } from 'mongoose';
+import { Paginated } from '../../../shared/pagination/pagination';
 import { IPost } from '../../models/post.interface';
 import { Post, PostDocument } from '../../schemas/post.schema';
 import {
@@ -15,25 +16,24 @@ export class PostMongooseRepository implements PostRepository {
     @InjectModel(Post.name) private readonly postModel: Model<PostDocument>,
   ) {}
 
-  async findAll(): Promise<IPost[]> {
-    const posts = await this.postModel.find().sort({ createdAt: -1 }).exec();
-    return posts.map((post) => this.map(post));
+  list(page: number, limit: number): Promise<Paginated<IPost>> {
+    return this.paginate({}, page, limit);
+  }
+
+  search(term: string, page: number, limit: number): Promise<Paginated<IPost>> {
+    // Escapa os simbolos da expressao regular: "c++" vira texto, nao padrao.
+    const escapedTerm = term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const expression = new RegExp(escapedTerm, 'i');
+    return this.paginate(
+      { $or: [{ title: expression }, { content: expression }] },
+      page,
+      limit,
+    );
   }
 
   async findById(id: string): Promise<IPost | null> {
-    if (!isValidObjectId(id)) return null;
     const post = await this.postModel.findById(id).exec();
     return post ? this.map(post) : null;
-  }
-
-  async search(term: string): Promise<IPost[]> {
-    const escapedTerm = term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-    const expression = new RegExp(escapedTerm, 'i');
-    const posts = await this.postModel
-      .find({ $or: [{ title: expression }, { content: expression }] })
-      .sort({ createdAt: -1 })
-      .exec();
-    return posts.map((post) => this.map(post));
   }
 
   async create(input: CreatePostInput): Promise<IPost> {
@@ -42,17 +42,35 @@ export class PostMongooseRepository implements PostRepository {
   }
 
   async update(id: string, input: UpdatePostInput): Promise<IPost | null> {
-    if (!isValidObjectId(id)) return null;
     const post = await this.postModel
-      .findByIdAndUpdate(id, input, { new: true, runValidators: true })
+      .findByIdAndUpdate(id, input, {
+        returnDocument: 'after',
+        runValidators: true,
+      })
       .exec();
     return post ? this.map(post) : null;
   }
 
   async delete(id: string): Promise<boolean> {
-    if (!isValidObjectId(id)) return false;
     const result = await this.postModel.deleteOne({ _id: id }).exec();
     return result.deletedCount === 1;
+  }
+
+  private async paginate(
+    query: QueryFilter<PostDocument>,
+    page: number,
+    limit: number,
+  ): Promise<Paginated<IPost>> {
+    const [posts, total] = await Promise.all([
+      this.postModel
+        .find(query)
+        .sort({ createdAt: -1 })
+        .skip((page - 1) * limit)
+        .limit(limit)
+        .exec(),
+      this.postModel.countDocuments(query).exec(),
+    ]);
+    return { items: posts.map((post) => this.map(post)), page, limit, total };
   }
 
   private map(post: PostDocument): IPost {
@@ -61,6 +79,7 @@ export class PostMongooseRepository implements PostRepository {
       title: post.title,
       content: post.content,
       author: post.author,
+      authorId: post.authorId,
       createdAt: post.createdAt,
       updatedAt: post.updatedAt,
     };

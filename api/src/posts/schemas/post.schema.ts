@@ -15,6 +15,9 @@ export class Post implements IPost {
   @Prop({ required: true, trim: true })
   author: string;
 
+  @Prop({ required: true, index: true })
+  authorId: string;
+
   createdAt?: Date;
   updatedAt?: Date;
 }
