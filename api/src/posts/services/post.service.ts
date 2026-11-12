@@ -6,6 +6,7 @@ import {
 import { Paginated } from '../../shared/pagination/pagination';
 import { AuthenticatedUser } from '../../users/models/user.interface';
 import { IPost } from '../models/post.interface';
+import { CommentRepository } from '../repositories/comment.repository';
 import {
   PostFieldsInput,
   PostRepository,
@@ -14,7 +15,10 @@ import {
 
 @Injectable()
 export class PostService {
-  constructor(private readonly postRepository: PostRepository) {}
+  constructor(
+    private readonly postRepository: PostRepository,
+    private readonly commentRepository: CommentRepository,
+  ) {}
 
   list(page: number, limit: number): Promise<Paginated<IPost>> {
     return this.postRepository.list(page, limit);
@@ -64,7 +68,7 @@ export class PostService {
     return updated;
   }
 
-  // Quem criou ou o master excluem.
+  // Quem criou ou o master excluem. Os comentarios do post vao junto.
   async delete(id: string, actor: AuthenticatedUser): Promise<void> {
     const post = await this.findById(id);
 
@@ -75,5 +79,6 @@ export class PostService {
     }
 
     await this.postRepository.delete(id);
+    await this.commentRepository.deleteByPost(id);
   }
 }

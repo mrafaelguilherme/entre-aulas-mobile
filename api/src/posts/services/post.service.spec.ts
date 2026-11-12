@@ -1,6 +1,7 @@
 import { ForbiddenException, NotFoundException } from '@nestjs/common';
 import { AuthenticatedUser } from '../../users/models/user.interface';
 import { IPost } from '../models/post.interface';
+import { CommentRepository } from '../repositories/comment.repository';
 import { PostRepository } from '../repositories/post.repository';
 import { PostService } from './post.service';
 
@@ -38,6 +39,7 @@ const page = { items: [post], page: 1, limit: 20, total: 1 };
 describe('PostService', () => {
   let service: PostService;
   let repository: jest.Mocked<PostRepository>;
+  let comments: jest.Mocked<CommentRepository>;
 
   beforeEach(() => {
     repository = {
@@ -48,7 +50,10 @@ describe('PostService', () => {
       update: jest.fn(),
       delete: jest.fn(),
     } as unknown as jest.Mocked<PostRepository>;
-    service = new PostService(repository);
+    comments = {
+      deleteByPost: jest.fn(),
+    } as unknown as jest.Mocked<CommentRepository>;
+    service = new PostService(repository, comments);
   });
 
   it('lists posts with pagination', async () => {
@@ -109,7 +114,7 @@ describe('PostService', () => {
     expect(repository.update).not.toHaveBeenCalled();
   });
 
-  it('lets the creator and the master delete, and refuses another teacher', async () => {
+  it('lets the creator and the master delete, removing the comments, and refuses another teacher', async () => {
     repository.findById.mockResolvedValue(post);
     repository.delete.mockResolvedValue(true);
 
@@ -119,6 +124,7 @@ describe('PostService', () => {
     await expect(service.delete(post.id, teacher)).resolves.toBeUndefined();
     await expect(service.delete(post.id, master)).resolves.toBeUndefined();
     expect(repository.delete).toHaveBeenCalledTimes(2);
+    expect(comments.deleteByPost).toHaveBeenCalledWith(post.id);
   });
 
   it('throws 404 when updating or deleting a missing post', async () => {
