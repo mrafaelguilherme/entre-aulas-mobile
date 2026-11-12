@@ -10,6 +10,7 @@ import {
   Query,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { Throttle } from '@nestjs/throttler';
 import { z } from 'zod';
 import { CurrentUser } from '../../shared/decorators/current-user.decorator';
 import { Public } from '../../shared/decorators/public.decorator';
@@ -41,8 +42,9 @@ export class CommentController {
     return this.commentService.listByPost(postId, query.page, query.limit);
   }
 
-  // Sem @Roles: qualquer pessoa logada comenta.
+  // Sem @Roles: qualquer pessoa logada comenta. Limite: 10 por minuto por IP.
   @Post('posts/:id/comments')
+  @Throttle({ default: { limit: 10, ttl: 60000 } })
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Comment on a post (any logged-in user)' })
   create(

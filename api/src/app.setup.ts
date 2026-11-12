@@ -38,6 +38,8 @@ export function validationExceptionFactory(
 
 // Tudo o que a API precisa alem dos modulos. Usado em main.ts e nos testes.
 export function configureApp(app: INestApplication, options: AppOptions): void {
+  // Cabecalhos de seguranca entram antes de qualquer outro app.use().
+  app.useSecurityHeaders();
   app.useGlobalFilters(new HttpExceptionFilter());
   app.useGlobalPipes(
     new ObjectIdParamPipe(),

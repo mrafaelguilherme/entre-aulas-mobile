@@ -5,6 +5,7 @@ import {
   ApiResponse,
   ApiTags,
 } from '@nestjs/swagger';
+import { Throttle } from '@nestjs/throttler';
 import { z } from 'zod';
 import { AllowPendingPassword } from '../../shared/decorators/allow-pending-password.decorator';
 import { CurrentUser } from '../../shared/decorators/current-user.decorator';
@@ -28,6 +29,7 @@ export class AuthController {
 
   @Public()
   @Post('signin')
+  @Throttle({ default: { limit: 20, ttl: 60000 } })
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Sign in and receive a JWT' })
   @ApiResponse({ status: 200, description: 'Token issued' })

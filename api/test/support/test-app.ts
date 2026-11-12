@@ -1,6 +1,7 @@
 import { INestApplication } from '@nestjs/common';
 import { getConnectionToken } from '@nestjs/mongoose';
 import { Test } from '@nestjs/testing';
+import { ThrottlerGuard } from '@nestjs/throttler';
 import { Connection } from 'mongoose';
 import request from 'supertest';
 import { AppModule } from '../../src/app.module';
@@ -25,6 +26,9 @@ export type TestAccount = Partial<CreateUserInput> &
   Pick<CreateUserInput, 'email' | 'role'>;
 
 export type TestAppOptions = {
+  // Liga o limite de requisicoes por IP. Desligado por padrao, para os
+  // outros testes nao esbarrarem no limite.
+  throttle?: boolean;
   // Liga a documentacao em /api.
   docs?: boolean;
 };
@@ -51,9 +55,15 @@ async function waitForIndexes(connection: Connection): Promise<void> {
 export async function createTestApp(
   options: TestAppOptions = {},
 ): Promise<TestApp> {
-  const moduleRef = await Test.createTestingModule({
-    imports: [AppModule],
-  }).compile();
+  const builder = Test.createTestingModule({ imports: [AppModule] });
+
+  if (!options.throttle) {
+    builder.overrideProvider(ThrottlerGuard).useValue({
+      canActivate: () => true,
+    });
+  }
+
+  const moduleRef = await builder.compile();
   const app = moduleRef.createNestApplication();
   app.useLogger(false);
   configureApp(app, { docs: options.docs ?? false });
