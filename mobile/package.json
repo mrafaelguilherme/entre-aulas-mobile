@@ -2,24 +2,46 @@
   "name": "mobile",
   "version": "1.0.0",
   "main": "index.ts",
-  "dependencies": {
-    "@expo-google-fonts/atkinson-hyperlegible-next": "^0.4.1",
-    "expo": "~58.0.23",
-    "expo-font": "~58.0.11",
-    "expo-secure-store": "~58.0.2",
-    "expo-status-bar": "~58.0.4",
-    "react": "19.3.0",
-    "react-native": "0.88.1"
-  },
-  "devDependencies": {
-    "@types/react": "~19.3.0",
-    "typescript": "~6.0.3"
-  },
+  "private": true,
   "scripts": {
     "start": "expo start",
     "android": "expo start --android",
     "ios": "expo start --ios",
-    "web": "expo start --web"
+    "web": "expo start --web",
+    "test": "jest",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint .",
+    "format": "prettier --write \"src/**/*.{ts,tsx}\" App.tsx jest.setup.ts"
   },
-  "private": true
+  "jest": {
+    "preset": "jest-expo",
+    "setupFilesAfterEnv": [
+      "<rootDir>/jest.setup.ts"
+    ]
+  },
+  "dependencies": {
+    "@expo-google-fonts/atkinson-hyperlegible-next": "^0.4.1",
+    "axios": "^1.21.1",
+    "expo": "~58.0.25",
+    "expo-font": "~58.0.12",
+    "expo-secure-store": "~58.0.3",
+    "expo-status-bar": "~58.0.5",
+    "react": "19.3.0",
+    "react-native": "0.88.1"
+  },
+  "devDependencies": {
+    "@testing-library/react-native": "^14.1.0",
+    "@types/jest": "^30.0.0",
+    "@types/react": "~19.3.0",
+    "eslint": "^10.14.0",
+    "eslint-config-prettier": "^10.1.8",
+    "eslint-plugin-prettier": "^5.5.7",
+    "eslint-plugin-react-hooks": "^7.1.1",
+    "jest": "~30.5.2",
+    "jest-expo": "~58.0.14",
+    "prettier": "^3.10.1",
+    "test-renderer": "^1.3.1",
+    "typescript": "~6.0.3",
+    "typescript-eslint": "^8.72.2"
+  }
 }
