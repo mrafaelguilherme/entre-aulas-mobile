@@ -1,5 +1,268 @@
-import { Placeholder } from '../../components/Placeholder';
+import { useFocusEffect } from '@react-navigation/native';
+import { useCallback, useState } from 'react';
+import { Alert, FlatList, StyleSheet, Text, View } from 'react-native';
+import { getErrorMessage, getStatus } from '../../api/client';
+import { createComment, deleteComment, listComments } from '../../api/comments';
+import { getPost } from '../../api/posts';
+import { Button } from '../../components/Button';
+import { ChalkHeader } from '../../components/ChalkHeader';
+import { ListState } from '../../components/ListState';
+import { TextField } from '../../components/TextField';
+import { useAuth } from '../../contexts/AuthContext';
+import { usePaginatedList } from '../../hooks/usePaginatedList';
+import { RootScreenProps } from '../../navigation/types';
+import { canDeleteComment } from '../../permissions';
+import { colors, fonts, fontSizes, spacing } from '../../theme';
+import { Comment, Post } from '../../types';
 
-export function PostReadScreen() {
-  return <Placeholder title="Leitura" />;
+const POST_GONE = 'Este post não está mais disponível.';
+
+type PostStatus = 'loading' | 'ready' | 'error' | 'gone';
+
+function formatDate(iso?: string): string {
+  if (!iso) {
+    return '';
+  }
+  return new Date(iso).toLocaleDateString('pt-BR', {
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+  });
 }
+
+// Leitura de um post, com os comentarios e o campo para comentar.
+export function PostReadScreen({ route, navigation }: RootScreenProps<'PostRead'>) {
+  const { id } = route.params;
+  const { user } = useAuth();
+
+  const [post, setPost] = useState<Post | null>(null);
+  const [postStatus, setPostStatus] = useState<PostStatus>('loading');
+  const [postError, setPostError] = useState('');
+
+  const [draft, setDraft] = useState('');
+  const [draftError, setDraftError] = useState('');
+  const [sending, setSending] = useState(false);
+
+  const fetchComments = useCallback((page: number) => listComments(id, page), [id]);
+  const comments = usePaginatedList<Comment>(fetchComments);
+  const refreshComments = comments.refresh;
+
+  const loadPost = useCallback(async () => {
+    setPostStatus('loading');
+    try {
+      setPost(await getPost(id));
+      setPostStatus('ready');
+    } catch (cause) {
+      // 404: o post foi excluido enquanto esta pessoa chegava ate aqui.
+      if (getStatus(cause) === 404) {
+        setPostStatus('gone');
+      } else {
+        setPostError(getErrorMessage(cause));
+        setPostStatus('error');
+      }
+    }
+  }, [id]);
+
+  useFocusEffect(
+    useCallback(() => {
+      loadPost();
+      refreshComments();
+    }, [loadPost, refreshComments]),
+  );
+
+  async function sendComment() {
+    const content = draft.trim();
+    if (!content) {
+      setDraftError('Escreva algo antes de comentar.');
+      return;
+    }
+    setSending(true);
+    setDraftError('');
+    try {
+      await createComment(id, content);
+      setDraft('');
+      await refreshComments();
+    } catch (cause) {
+      // O texto digitado fica no campo, para a pessoa nao perder o que escreveu.
+      setDraftError(getStatus(cause) === 404 ? POST_GONE : getErrorMessage(cause));
+    } finally {
+      setSending(false);
+    }
+  }
+
+  function confirmDelete(comment: Comment) {
+    Alert.alert('Apagar comentário', 'Tem certeza? Esta ação não pode ser desfeita.', [
+      { text: 'Cancelar', style: 'cancel' },
+      { text: 'Apagar', style: 'destructive', onPress: () => removeComment(comment.id) },
+    ]);
+  }
+
+  async function removeComment(commentId: string) {
+    try {
+      await deleteComment(commentId);
+      await refreshComments();
+    } catch (cause) {
+      Alert.alert('Não foi possível apagar', getErrorMessage(cause));
+    }
+  }
+
+  if (postStatus !== 'ready' || !post) {
+    return (
+      <View style={styles.screen}>
+        <ChalkHeader title={postStatus === 'gone' ? 'Post indisponível' : 'Leitura'} />
+        {postStatus === 'gone' ? (
+          <View style={styles.gone}>
+            <Text style={styles.goneText}>{POST_GONE}</Text>
+            <Button
+              title="Voltar para a lista"
+              variant="outline"
+              onPress={() => navigation.goBack()}
+            />
+          </View>
+        ) : (
+          <ListState
+            status={postStatus === 'error' ? 'error' : 'loading'}
+            message={postError}
+            onRetry={loadPost}
+          />
+        )}
+      </View>
+    );
+  }
+
+  return (
+    <View style={styles.screen}>
+      <ChalkHeader title={post.title}>
+        <Text style={styles.byline}>
+          {post.author}
+          {'\n'}
+          {formatDate(post.createdAt)}
+        </Text>
+      </ChalkHeader>
+      <FlatList
+        data={comments.items}
+        keyExtractor={(comment) => comment.id}
+        ListHeaderComponent={
+          <View style={styles.body}>
+            <Text style={styles.content}>{post.content}</Text>
+            <Text accessibilityRole="header" style={styles.heading}>
+              Comentários
+            </Text>
+          </View>
+        }
+        renderItem={({ item }) => (
+          <View style={styles.comment}>
+            <Text style={styles.commentAuthor}>{item.author}</Text>
+            <Text style={styles.commentText}>{item.content}</Text>
+            {canDeleteComment(user, item) ? (
+              <View style={styles.commentActions}>
+                <Button
+                  title="Apagar"
+                  variant="danger"
+                  onPress={() => confirmDelete(item)}
+                  accessibilityHint="Pede confirmação antes de apagar"
+                />
+              </View>
+            ) : null}
+          </View>
+        )}
+        ListEmptyComponent={
+          comments.status === 'ready' ? undefined : (
+            <ListState
+              status={comments.status}
+              message={comments.error ?? undefined}
+              emptyMessage="Nenhum comentário ainda."
+              onRetry={refreshComments}
+            />
+          )
+        }
+        ListFooterComponent={
+          <View style={styles.footer}>
+            {comments.hasMore ? (
+              <Button title="Carregar mais" variant="outline" onPress={comments.loadMore} />
+            ) : null}
+            {user ? (
+              <>
+                <TextField
+                  label="Comentário"
+                  placeholder="Escreva um comentário"
+                  value={draft}
+                  onChangeText={setDraft}
+                  error={draftError || undefined}
+                  multiline
+                  maxLength={1000}
+                />
+                <Button title="Comentar" onPress={sendComment} loading={sending} />
+              </>
+            ) : (
+              <>
+                <Text style={styles.signInHint}>Entre para comentar.</Text>
+                <Button
+                  title="Entrar"
+                  variant="outline"
+                  onPress={() => navigation.navigate('Tabs', { screen: 'Entrar' })}
+                />
+              </>
+            )}
+          </View>
+        }
+        contentContainerStyle={styles.list}
+        keyboardShouldPersistTaps="handled"
+      />
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  screen: { flex: 1, backgroundColor: colors.background },
+  byline: {
+    color: colors.onDark,
+    fontFamily: fonts.regular,
+    fontSize: fontSizes.sm + 1,
+    lineHeight: 20,
+  },
+  list: { paddingHorizontal: spacing.lg, paddingBottom: spacing.xl },
+  body: { paddingTop: spacing.lg, gap: spacing.lg },
+  content: {
+    color: colors.text,
+    fontFamily: fonts.regular,
+    fontSize: fontSizes.md + 1,
+    lineHeight: 25,
+  },
+  heading: {
+    color: colors.text,
+    fontFamily: fonts.bold,
+    fontSize: fontSizes.lg - 1,
+  },
+  comment: {
+    paddingVertical: spacing.md,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+    gap: spacing.xs,
+  },
+  commentAuthor: {
+    color: colors.primary,
+    fontFamily: fonts.bold,
+    fontSize: fontSizes.sm + 1,
+  },
+  commentText: {
+    color: colors.text,
+    fontFamily: fonts.regular,
+    fontSize: fontSizes.sm + 1,
+    lineHeight: 20,
+  },
+  commentActions: { flexDirection: 'row', marginTop: spacing.xs },
+  footer: { paddingTop: spacing.lg, gap: spacing.md },
+  signInHint: {
+    color: colors.textSecondary,
+    fontFamily: fonts.regular,
+    fontSize: fontSizes.md,
+  },
+  gone: { padding: spacing.xl, gap: spacing.lg, alignItems: 'center' },
+  goneText: {
+    textAlign: 'center',
+    color: colors.textSecondary,
+    fontFamily: fonts.regular,
+    fontSize: fontSizes.md,
+  },
+});
