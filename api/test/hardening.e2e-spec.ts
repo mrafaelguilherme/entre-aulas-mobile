@@ -93,7 +93,7 @@ describe('Hardening (e2e)', () => {
 
     it('a write by a teacher logs nothing from the audit interceptor', async () => {
       const teacher = await t.createUser({
-        email: 'lia@escola.com.br',
+        email: '../users/',
         role: 'teacher',
       });
       const teacherToken = await t.signIn(teacher.email);

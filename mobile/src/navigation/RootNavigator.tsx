@@ -117,7 +117,13 @@ export function RootNavigator() {
   }
 
   return (
-    <NavigationContainer ref={navigationRef} theme={theme}>
+    // A key troca quando o primeiro acesso termina: a navegacao inteira recomeca
+    // do zero, nas abas, em vez de continuar parada na tela de troca de senha.
+    <NavigationContainer
+      key={user?.mustChangePassword ? 'first-access' : 'main'}
+      ref={navigationRef}
+      theme={theme}
+    >
       <Stack.Navigator screenOptions={{ headerShown: false }}>
         {user?.mustChangePassword ? (
           // Primeiro acesso: so existe a troca de senha. Nao ha para onde voltar.

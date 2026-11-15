@@ -113,4 +113,15 @@ describe('RootNavigator', () => {
     await render(<RootNavigator />);
     expect(screen.queryByText('3')).not.toBeOnTheScreen();
   });
+
+  it('after the first-access password change, the app restarts on the tabs', async () => {
+    session({ role: 'student', mustChangePassword: true });
+    await render(<RootNavigator />);
+    expect(navigationRef.getCurrentRoute()?.name).toBe('ChangePassword');
+
+    session({ role: 'student', mustChangePassword: false });
+    await screen.rerender(<RootNavigator />);
+    // getCurrentRoute devolve a tela mais interna: a aba Posts, dentro de Tabs.
+    expect(navigationRef.getCurrentRoute()?.name).toBe('Posts');
+  });
 });
