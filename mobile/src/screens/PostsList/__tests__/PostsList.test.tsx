@@ -104,4 +104,10 @@ describe('PostsListScreen', () => {
     await fireEvent(field, 'submitEditing');
     expect(await screen.findByText('Nenhum post encontrado.')).toBeOnTheScreen();
   });
+
+  it('limits the search term to 100 chars, like the API', async () => {
+    await renderScreen(PostsListScreen);
+    await screen.findByText('Como escrever uma boa redação');
+    expect(screen.getByLabelText('Buscar por palavra-chave')).toHaveProp('maxLength', 100);
+  });
 });

@@ -3,6 +3,7 @@ import * as SecureStore from 'expo-secure-store';
 import { Alert, Pressable, Text } from 'react-native';
 import * as authApi from '../../api/auth';
 import { setAuthToken, setUnauthorizedHandler } from '../../api/client';
+import { httpError, networkError } from '../../test-utils/httpError';
 import { SessionUser } from '../../types';
 import { AuthProvider, useAuth } from '../AuthContext';
 
@@ -13,7 +14,9 @@ jest.mock('expo-secure-store', () => ({
   deleteItemAsync: jest.fn(),
 }));
 jest.mock('../../api/auth');
+// getStatus continua o de verdade; so as funcoes de sessao viram dubles.
 jest.mock('../../api/client', () => ({
+  ...jest.requireActual('../../api/client'),
   setAuthToken: jest.fn(),
   setUnauthorizedHandler: jest.fn(),
 }));
@@ -64,6 +67,11 @@ function renderProbe() {
   );
 }
 
+// A funcao que o AuthProvider registrou no cliente da API para o 401.
+function unauthorizedHandler(): () => void {
+  return mocked.setUnauthorizedHandler.mock.calls.at(-1)?.[0] as () => void;
+}
+
 beforeEach(() => {
   jest.clearAllMocks();
   mocked.getItem.mockResolvedValue(null);
@@ -90,10 +98,20 @@ describe('AuthProvider', () => {
 
   it('clears the token and has no user when /me answers 401', async () => {
     mocked.getItem.mockResolvedValue('token-velho');
-    mocked.getMe.mockRejectedValue(new Error('401'));
+    mocked.getMe.mockRejectedValue(httpError(401, true));
     await renderProbe();
     expect(await screen.findByText('sem usuario')).toBeOnTheScreen();
     expect(mocked.deleteItem).toHaveBeenCalledWith('entre-aulas-token');
+    expect(mocked.setAuthToken).toHaveBeenLastCalledWith(null);
+  });
+
+  it('keeps the saved token and starts as a visitor when /me fails without a response', async () => {
+    mocked.getItem.mockResolvedValue('token-salvo');
+    mocked.getMe.mockRejectedValue(networkError);
+    await renderProbe();
+    expect(await screen.findByText('sem usuario')).toBeOnTheScreen();
+    // O token fica no cofre para a proxima abertura, mas sai da memoria.
+    expect(mocked.deleteItem).not.toHaveBeenCalled();
     expect(mocked.setAuthToken).toHaveBeenLastCalledWith(null);
   });
 
@@ -124,14 +142,28 @@ describe('AuthProvider', () => {
     await renderProbe();
     await screen.findByText('Ana');
 
-    // Pega a funcao que o AuthProvider registrou no cliente da API e a dispara.
-    const handler = mocked.setUnauthorizedHandler.mock.calls.at(-1)?.[0] as () => void;
     await act(async () => {
-      handler();
+      unauthorizedHandler()();
     });
 
     expect(await screen.findByText('sem usuario')).toBeOnTheScreen();
     expect(mocked.deleteItem).toHaveBeenCalledWith('entre-aulas-token');
     expect(alert).toHaveBeenCalledWith('Sessão expirada', 'Entre novamente para continuar.');
+  });
+
+  it('two 401s at the same time show one Alert, not two', async () => {
+    const alert = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
+    mocked.getItem.mockResolvedValue('token-salvo');
+    await renderProbe();
+    await screen.findByText('Ana');
+
+    // Duas requisicoes em paralelo recebem 401 (ex.: a lista e o numero de pendentes).
+    await act(async () => {
+      unauthorizedHandler()();
+      unauthorizedHandler()();
+    });
+
+    expect(await screen.findByText('sem usuario')).toBeOnTheScreen();
+    expect(alert).toHaveBeenCalledTimes(1);
   });
 });

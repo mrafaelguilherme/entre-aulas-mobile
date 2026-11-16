@@ -1,4 +1,4 @@
-import { assertSecureApiUrl } from '../../config/env';
+import { assertSecureApiUrl } from '../env';
 
 describe('assertSecureApiUrl', () => {
   it('rejects http:// outside development', () => {

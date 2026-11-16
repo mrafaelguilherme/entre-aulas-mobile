@@ -11,7 +11,7 @@ import {
 } from 'react';
 import { Alert } from 'react-native';
 import * as authApi from '../api/auth';
-import { setAuthToken, setUnauthorizedHandler } from '../api/client';
+import { getStatus, setAuthToken, setUnauthorizedHandler } from '../api/client';
 import { SessionUser } from '../types';
 
 // Chave do token no cofre do aparelho (SecureStore, cifrado pelo sistema).
@@ -32,6 +32,9 @@ export function AuthProvider({ children }: PropsWithChildren) {
   const [user, setUser] = useState<SessionUser | null>(null);
   // Marca que a pessoa esta saindo por vontade propria, para nao avisar "sessao expirada".
   const leaving = useRef(false);
+  // Marca que o aviso de sessao expirada ja apareceu. Varias requisicoes podem
+  // receber 401 ao mesmo tempo (ex.: a lista e o numero de pendentes): um aviso so.
+  const alerted = useRef(false);
 
   // Apaga o token do aparelho e da memoria, e esquece quem estava logado.
   const clearSession = useCallback(async () => {
@@ -54,10 +57,17 @@ export function AuthProvider({ children }: PropsWithChildren) {
         const me = await authApi.getMe();
         if (active) {
           setUser(me);
+          alerted.current = false;
         }
-      } catch {
-        // Token velho ou API fora do ar: comeca sem sessao.
-        await clearSession();
+      } catch (cause) {
+        if (getStatus(cause) === 401) {
+          // Token velho: apaga e comeca sem sessao.
+          await clearSession();
+        } else {
+          // Sem rede ou API fora do ar: comeca como visitante, mas guarda o
+          // token no cofre para tentar de novo na proxima abertura.
+          setAuthToken(null);
+        }
       } finally {
         if (active) {
           setLoading(false);
@@ -71,12 +81,13 @@ export function AuthProvider({ children }: PropsWithChildren) {
     };
   }, [clearSession]);
 
-  // Um 401 em requisicao com token: a sessao acabou. Limpa e avisa.
+  // Um 401 em requisicao com token: a sessao acabou. Limpa e avisa uma vez.
   useEffect(() => {
     setUnauthorizedHandler(() => {
       const wasLeaving = leaving.current;
       clearSession();
-      if (!wasLeaving) {
+      if (!wasLeaving && !alerted.current) {
+        alerted.current = true;
         Alert.alert('Sessão expirada', 'Entre novamente para continuar.');
       }
     });
@@ -93,6 +104,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
       try {
         const me = await authApi.getMe();
         setUser(me);
+        alerted.current = false;
       } catch (error) {
         await clearSession();
         throw error;

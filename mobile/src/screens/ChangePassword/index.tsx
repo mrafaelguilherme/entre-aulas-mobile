@@ -47,7 +47,15 @@ export function ChangePasswordScreen() {
             try {
               await changePassword(values.currentPassword, values.newPassword);
               // A troca invalida o token antigo. Entra de novo com a senha nova.
-              await signIn(user.email, values.newPassword);
+              try {
+                await signIn(user.email, values.newPassword);
+              } catch {
+                // A senha mudou, mas o login novo falhou (ex.: sem rede).
+                // Sai de vez, em vez de ficar com uma sessao pela metade.
+                await signOut();
+                Alert.alert('Senha alterada', 'Entre de novo com a senha nova.');
+                return;
+              }
               Alert.alert('Senha alterada', 'Sua nova senha já vale.');
               if (navigation.canGoBack()) {
                 navigation.goBack();
@@ -78,6 +86,7 @@ export function ChangePasswordScreen() {
                 onBlur={handleBlur('newPassword')}
                 error={touched.newPassword ? errors.newPassword : undefined}
                 secureTextEntry
+                autoCapitalize="none"
                 autoComplete="new-password"
               />
               <TextField
@@ -87,6 +96,7 @@ export function ChangePasswordScreen() {
                 onBlur={handleBlur('confirmation')}
                 error={touched.confirmation ? errors.confirmation : undefined}
                 secureTextEntry
+                autoCapitalize="none"
                 autoComplete="new-password"
               />
               {error ? (

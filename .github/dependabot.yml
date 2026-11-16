@@ -7,6 +7,12 @@ updates:
     groups:
       api:
         patterns: ['*']
+    # Versao maior do TypeScript e dos tipos do Node exige migracao manual.
+    ignore:
+      - dependency-name: typescript
+        update-types: ['version-update:semver-major']
+      - dependency-name: '@types/node'
+        update-types: ['version-update:semver-major']
 
   - package-ecosystem: npm
     directory: /mobile
@@ -15,6 +21,14 @@ updates:
     groups:
       mobile:
         patterns: ['*']
+    # O Expo fixa a versao do React, do React Native e do TypeScript por SDK.
+    ignore:
+      - dependency-name: typescript
+        update-types: ['version-update:semver-major']
+      - dependency-name: react
+        update-types: ['version-update:semver-major']
+      - dependency-name: react-native
+        update-types: ['version-update:semver-major']
 
   - package-ecosystem: github-actions
     directory: /

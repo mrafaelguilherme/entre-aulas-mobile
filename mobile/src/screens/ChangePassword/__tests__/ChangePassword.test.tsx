@@ -2,7 +2,7 @@ import { fireEvent, screen, waitFor } from '@testing-library/react-native';
 import { Alert } from 'react-native';
 import { changePassword } from '../../../api/auth';
 import { useAuth } from '../../../contexts/AuthContext';
-import { httpError } from '../../../test-utils/httpError';
+import { httpError, networkError } from '../../../test-utils/httpError';
 import { renderScreen } from '../../../test-utils/renderScreen';
 import { ChangePasswordScreen } from '../index';
 
@@ -106,5 +106,15 @@ describe('ChangePasswordScreen', () => {
     expect(screen.getByLabelText('Senha atual')).toHaveProp('secureTextEntry', true);
     expect(screen.getByLabelText('Nova senha')).toHaveProp('secureTextEntry', true);
     expect(screen.getByLabelText('Confirmar nova senha')).toHaveProp('secureTextEntry', true);
+    expect(screen.getByLabelText('Nova senha')).toHaveProp('autoCapitalize', 'none');
+  });
+
+  it('if the new login fails, signs out and asks to log in with the new password', async () => {
+    session(false);
+    signIn.mockRejectedValue(networkError);
+    await renderScreen(ChangePasswordScreen);
+    await fill(CURRENT, NEXT, NEXT);
+    await waitFor(() => expect(signOut).toHaveBeenCalled());
+    expect(Alert.alert).toHaveBeenCalledWith('Senha alterada', 'Entre de novo com a senha nova.');
   });
 });

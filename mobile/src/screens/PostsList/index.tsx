@@ -53,6 +53,7 @@ export function PostsListScreen() {
           returnKeyType="search"
           autoCapitalize="none"
           autoCorrect={false}
+          maxLength={100}
           style={styles.search}
         />
       </ChalkHeader>
