@@ -18,6 +18,7 @@ const posts: Post[] = [
     content: 'A redação dissertativa pede que você defenda um ponto de vista.',
     author: 'Professora Ana Silva',
     authorId: 't1',
+    createdAt: '2026-11-12T15:00:00.000Z',
   },
   {
     id: 'p2',
@@ -25,6 +26,7 @@ const posts: Post[] = [
     content: 'A função do primeiro grau tem a forma f(x) = ax + b.',
     author: 'Professor Carlos Lima',
     authorId: 't2',
+    createdAt: '2026-11-10T15:00:00.000Z',
   },
 ];
 
@@ -50,6 +52,12 @@ describe('PostsListScreen', () => {
     expect(screen.getByText('Professora Ana Silva')).toBeOnTheScreen();
     expect(screen.getByText(posts[0].content)).toHaveProp('numberOfLines', 3);
     expect(mockedList).toHaveBeenCalledWith(1);
+  });
+
+  it('shows the publication date of each post', async () => {
+    await renderScreen(PostsListScreen);
+    expect(await screen.findByText('12/11/2026')).toBeOnTheScreen();
+    expect(screen.getByText('10/11/2026')).toBeOnTheScreen();
   });
 
   it('opens the post when a row is pressed', async () => {

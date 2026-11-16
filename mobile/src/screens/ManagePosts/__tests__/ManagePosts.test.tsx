@@ -18,6 +18,7 @@ const anaPost: Post = {
   content: 'Como defender um ponto de vista.',
   author: 'Professora Ana Silva',
   authorId: 't1',
+  createdAt: '2026-11-12T15:00:00.000Z',
 };
 const carlosPost: Post = {
   id: 'p2',
@@ -58,12 +59,13 @@ beforeEach(() => {
 });
 
 describe('ManagePostsScreen', () => {
-  it('lists every post, not only the logged-in user posts', async () => {
+  it('lists every post, not only the logged-in user posts, with the date', async () => {
     session(ana);
     await renderScreen(ManagePostsScreen);
     expect(await screen.findByText('Redação dissertativa')).toBeOnTheScreen();
     expect(screen.getByText('Função do primeiro grau')).toBeOnTheScreen();
     expect(screen.getByText('Professor Carlos Lima')).toBeOnTheScreen();
+    expect(screen.getByText('12/11/2026')).toBeOnTheScreen();
     expect(mockedList).toHaveBeenCalledWith(1);
   });
 
@@ -75,21 +77,28 @@ describe('ManagePostsScreen', () => {
     expect(screen.getByRole('button', { name: 'Excluir Redação dissertativa' })).toBeEnabled();
   });
 
-  it('another teacher post has both disabled, with "Só quem criou o post pode alterar."', async () => {
+  it('another teacher post has no Editar and no Excluir, with "Só quem criou o post pode editar."', async () => {
     session(ana);
     await renderScreen(ManagePostsScreen);
     await screen.findByText('Função do primeiro grau');
-    expect(screen.getByRole('button', { name: 'Editar Função do primeiro grau' })).toBeDisabled();
-    expect(screen.getByRole('button', { name: 'Excluir Função do primeiro grau' })).toBeDisabled();
-    expect(screen.getAllByText('Só quem criou o post pode alterar.')).toHaveLength(1);
+    expect(
+      screen.queryByRole('button', { name: 'Editar Função do primeiro grau' }),
+    ).not.toBeOnTheScreen();
+    expect(
+      screen.queryByRole('button', { name: 'Excluir Função do primeiro grau' }),
+    ).not.toBeOnTheScreen();
+    expect(screen.getAllByText('Só quem criou o post pode editar.')).toHaveLength(1);
   });
 
-  it('for the master, another teacher post has Excluir enabled and Editar disabled', async () => {
+  it('for the master, another teacher post has Excluir but no Editar', async () => {
     session(master);
     await renderScreen(ManagePostsScreen);
     await screen.findByText('Função do primeiro grau');
-    expect(screen.getByRole('button', { name: 'Editar Função do primeiro grau' })).toBeDisabled();
+    expect(
+      screen.queryByRole('button', { name: 'Editar Função do primeiro grau' }),
+    ).not.toBeOnTheScreen();
     expect(screen.getByRole('button', { name: 'Excluir Função do primeiro grau' })).toBeEnabled();
+    expect(screen.getAllByText('Só quem criou o post pode editar.')).toHaveLength(2);
   });
 
   it('Excluir asks for confirmation and only then calls deletePost', async () => {

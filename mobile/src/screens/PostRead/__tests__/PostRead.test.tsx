@@ -33,6 +33,7 @@ const beatrizComment: Comment = {
   content: 'Podemos usar materiais recicláveis?',
   author: 'Beatriz Souza',
   authorId: 's1',
+  createdAt: '2026-11-12T15:00:00.000Z',
 };
 
 const beatriz: SessionUser = {
@@ -74,11 +75,12 @@ describe('PostReadScreen', () => {
     expect(mockedGetPost).toHaveBeenCalledWith('p1');
   });
 
-  it('lists the comments with author and content', async () => {
+  it('lists the comments with author, date, time and content', async () => {
     session(null);
     await renderScreen(PostReadScreen, { params: { id: 'p1' } });
     expect(await screen.findByText('Podemos usar materiais recicláveis?')).toBeOnTheScreen();
     expect(screen.getByText('Beatriz Souza')).toBeOnTheScreen();
+    expect(screen.getByText(/12\/11\/2026 às \d{2}:\d{2}/)).toBeOnTheScreen();
     expect(mockedListComments).toHaveBeenCalledWith('p1', 1);
   });
 
@@ -87,7 +89,7 @@ describe('PostReadScreen', () => {
     await renderScreen(PostReadScreen, { params: { id: 'p1' } });
     expect(await screen.findByText('Entre para comentar.')).toBeOnTheScreen();
     expect(screen.queryByLabelText('Comentário')).not.toBeOnTheScreen();
-    expect(screen.queryByRole('button', { name: 'Apagar' })).not.toBeOnTheScreen();
+    expect(screen.queryByRole('button', { name: /^Apagar comentário/ })).not.toBeOnTheScreen();
   });
 
   it('a logged-in user sees the field, and a sent comment appears in the list', async () => {
@@ -141,9 +143,9 @@ describe('PostReadScreen', () => {
     await renderScreen(PostReadScreen, { params: { id: 'p1' } });
     await screen.findByText('Podemos usar materiais recicláveis?');
     // So o proprio comentario da aluna tem Apagar.
-    expect(screen.getAllByRole('button', { name: 'Apagar' })).toHaveLength(1);
+    expect(screen.getAllByRole('button', { name: /^Apagar comentário/ })).toHaveLength(1);
 
-    await fireEvent.press(screen.getByRole('button', { name: 'Apagar' }));
+    await fireEvent.press(screen.getByRole('button', { name: /^Apagar comentário/ }));
     expect(mockedDeleteComment).not.toHaveBeenCalled();
     const alert = (Alert.alert as jest.Mock).mock.calls.at(-1);
     expect(alert?.[0]).toBe('Apagar comentário');

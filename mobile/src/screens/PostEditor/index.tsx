@@ -28,6 +28,7 @@ const schema = Yup.object({
 type LoadStatus = 'loading' | 'ready' | 'error';
 
 // Sem id, cria um post. Com id, edita. A mesma tela, com titulo e dados proprios.
+// O autor aparece na lousa, como na leitura: ele vem do servidor, e nao do formulario.
 export function PostEditorScreen({ route, navigation }: RootScreenProps<'PostEditor'>) {
   const id = route.params?.id;
   const { user } = useAuth();
@@ -83,6 +84,7 @@ export function PostEditorScreen({ route, navigation }: RootScreenProps<'PostEdi
   }
 
   const title = id ? 'Editar post' : 'Novo post';
+  const authorName = post?.author ?? user?.name ?? '';
 
   if (loadStatus !== 'ready') {
     return (
@@ -95,7 +97,9 @@ export function PostEditorScreen({ route, navigation }: RootScreenProps<'PostEdi
 
   return (
     <View style={styles.screen}>
-      <ChalkHeader title={title} />
+      <ChalkHeader title={title}>
+        <Text style={styles.byline}>Autor: {authorName}</Text>
+      </ChalkHeader>
       <ScrollView contentContainerStyle={styles.form} keyboardShouldPersistTaps="handled">
         <Formik
           initialValues={{ title: post?.title ?? '', content: post?.content ?? '' }}
@@ -111,12 +115,6 @@ export function PostEditorScreen({ route, navigation }: RootScreenProps<'PostEdi
                 onBlur={handleBlur('title')}
                 error={touched.title ? errors.title : undefined}
                 maxLength={200}
-              />
-              <TextField
-                label="Autor"
-                value={post?.author ?? user?.name ?? ''}
-                onChangeText={() => {}}
-                editable={false}
               />
               <TextField
                 label="Conteúdo"
@@ -143,6 +141,11 @@ export function PostEditorScreen({ route, navigation }: RootScreenProps<'PostEdi
 
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.background },
+  byline: {
+    color: colors.onDark,
+    fontFamily: fonts.regular,
+    fontSize: fontSizes.sm + 1,
+  },
   form: { padding: spacing.lg, gap: spacing.lg },
   error: {
     color: colors.danger,

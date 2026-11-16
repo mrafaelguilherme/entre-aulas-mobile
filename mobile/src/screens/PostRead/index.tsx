@@ -6,6 +6,7 @@ import { createComment, deleteComment, listComments } from '../../api/comments';
 import { getPost } from '../../api/posts';
 import { Button } from '../../components/Button';
 import { ChalkHeader } from '../../components/ChalkHeader';
+import { IconButton } from '../../components/IconButton';
 import { ListState } from '../../components/ListState';
 import { TextField } from '../../components/TextField';
 import { useAuth } from '../../contexts/AuthContext';
@@ -14,21 +15,11 @@ import { RootScreenProps } from '../../navigation/types';
 import { canDeleteComment } from '../../permissions';
 import { colors, fonts, fontSizes, spacing } from '../../theme';
 import { Comment, Post } from '../../types';
+import { formatDate, formatDateTime } from '../../utils/dates';
 
 const POST_GONE = 'Este post não está mais disponível.';
 
 type PostStatus = 'loading' | 'ready' | 'error' | 'gone';
-
-function formatDate(iso?: string): string {
-  if (!iso) {
-    return '';
-  }
-  return new Date(iso).toLocaleDateString('pt-BR', {
-    day: 'numeric',
-    month: 'long',
-    year: 'numeric',
-  });
-}
 
 // Leitura de um post, com os comentarios e o campo para comentar.
 export function PostReadScreen({ route, navigation }: RootScreenProps<'PostRead'>) {
@@ -42,6 +33,8 @@ export function PostReadScreen({ route, navigation }: RootScreenProps<'PostRead'
   const [draft, setDraft] = useState('');
   const [draftError, setDraftError] = useState('');
   const [sending, setSending] = useState(false);
+  // Id do comentario sendo apagado, para travar o icone dele.
+  const [deleting, setDeleting] = useState<string | null>(null);
 
   const fetchComments = useCallback((page: number) => listComments(id, page), [id]);
   const comments = usePaginatedList<Comment>(fetchComments);
@@ -98,11 +91,14 @@ export function PostReadScreen({ route, navigation }: RootScreenProps<'PostRead'
   }
 
   async function removeComment(commentId: string) {
+    setDeleting(commentId);
     try {
       await deleteComment(commentId);
       await refreshComments();
     } catch (cause) {
       Alert.alert('Não foi possível apagar', getErrorMessage(cause));
+    } finally {
+      setDeleting(null);
     }
   }
 
@@ -152,18 +148,21 @@ export function PostReadScreen({ route, navigation }: RootScreenProps<'PostRead'
         }
         renderItem={({ item }) => (
           <View style={styles.comment}>
-            <Text style={styles.commentAuthor}>{item.author}</Text>
-            <Text style={styles.commentText}>{item.content}</Text>
-            {canDeleteComment(user, item) ? (
-              <View style={styles.commentActions}>
-                <Button
-                  title="Apagar"
-                  variant="danger"
-                  onPress={() => confirmDelete(item)}
+            <View style={styles.commentMeta}>
+              <Text style={styles.commentAuthor}>{item.author}</Text>
+              <Text style={styles.commentDate}>{formatDateTime(item.createdAt)}</Text>
+              {canDeleteComment(user, item) ? (
+                <IconButton
+                  icon="trash-outline"
+                  color={colors.danger}
+                  label={`Apagar comentário de ${item.author}`}
                   accessibilityHint="Pede confirmação antes de apagar"
+                  loading={deleting === item.id}
+                  onPress={() => confirmDelete(item)}
                 />
-              </View>
-            ) : null}
+              ) : null}
+            </View>
+            <Text style={styles.commentText}>{item.content}</Text>
           </View>
         )}
         ListEmptyComponent={
@@ -235,15 +234,27 @@ const styles = StyleSheet.create({
     fontSize: fontSizes.lg - 1,
   },
   comment: {
-    paddingVertical: spacing.md,
+    paddingVertical: spacing.sm,
     borderBottomWidth: 1,
     borderBottomColor: colors.border,
     gap: spacing.xs,
   },
+  // Autor a esquerda; data, hora e o icone de apagar a direita.
+  commentMeta: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
   commentAuthor: {
+    flex: 1,
     color: colors.primary,
     fontFamily: fonts.bold,
     fontSize: fontSizes.sm + 1,
+  },
+  commentDate: {
+    color: colors.textSecondary,
+    fontFamily: fonts.regular,
+    fontSize: fontSizes.sm - 1,
   },
   commentText: {
     color: colors.text,
@@ -251,7 +262,6 @@ const styles = StyleSheet.create({
     fontSize: fontSizes.sm + 1,
     lineHeight: 20,
   },
-  commentActions: { flexDirection: 'row', marginTop: spacing.xs },
   footer: { paddingTop: spacing.lg, gap: spacing.md },
   signInHint: {
     color: colors.textSecondary,

@@ -39,4 +39,10 @@ describe('Button', () => {
     );
     expect(screen.getByHintText('Pede confirmação')).toBeOnTheScreen();
   });
+  it('compact is lower on the screen but keeps a 48 touch target with hitSlop', async () => {
+    await render(<Button title="Editar" size="compact" onPress={() => {}} />);
+    const button = screen.getByRole('button', { name: 'Editar' });
+    expect(button).toHaveStyle({ minHeight: 40 });
+    expect(button).toHaveProp('hitSlop', { top: 4, bottom: 4 });
+  });
 });

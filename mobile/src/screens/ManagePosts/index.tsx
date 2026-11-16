@@ -5,21 +5,23 @@ import { getErrorMessage } from '../../api/client';
 import { deletePost, listPosts } from '../../api/posts';
 import { Button } from '../../components/Button';
 import { ChalkHeader } from '../../components/ChalkHeader';
+import { IconButton } from '../../components/IconButton';
 import { ListState } from '../../components/ListState';
 import { useAuth } from '../../contexts/AuthContext';
 import { usePaginatedList } from '../../hooks/usePaginatedList';
 import { canDeletePost, canEditPost } from '../../permissions';
 import { colors, fonts, fontSizes, spacing } from '../../theme';
 import { Post } from '../../types';
+import { formatShortDate } from '../../utils/dates';
 
-// A aba Gerenciar: todos os posts, com Editar e Excluir conforme a posse.
-// A tela so reflete a regra; quem garante e a API.
+// A aba Gerenciar: todos os posts. Cada linha mostra so as acoes que a pessoa
+// pode usar, como icones; sem acao, uma frase explica. Quem garante a regra e a API.
 export function ManagePostsScreen() {
   const navigation = useNavigation();
   const { user } = useAuth();
   const { items, status, error, refreshing, hasMore, refresh, loadMore } =
     usePaginatedList<Post>(listPosts);
-  // Id do post sendo excluido, para travar o botao dele.
+  // Id do post sendo excluido, para travar o icone dele.
   const [deleting, setDeleting] = useState<string | null>(null);
 
   useFocusEffect(
@@ -67,29 +69,35 @@ export function ManagePostsScreen() {
           const deletable = canDeletePost(user, item);
           return (
             <View style={styles.row}>
-              <Text style={styles.title}>{item.title}</Text>
-              <Text style={styles.author}>{item.author}</Text>
-              <View style={styles.actions}>
-                <Button
-                  title="Editar"
-                  variant="outline"
-                  accessibilityLabel={`Editar ${item.title}`}
-                  disabled={!editable}
-                  onPress={() => navigation.navigate('PostEditor', { id: item.id })}
-                />
-                <Button
-                  title="Excluir"
-                  variant="danger"
-                  accessibilityLabel={`Excluir ${item.title}`}
-                  accessibilityHint="Pede confirmação antes de excluir"
-                  disabled={!deletable}
-                  loading={deleting === item.id}
-                  onPress={() => confirmDelete(item)}
-                />
+              <View style={styles.titleLine}>
+                <Text style={styles.title}>{item.title}</Text>
+                <Text style={styles.date}>{formatShortDate(item.createdAt)}</Text>
               </View>
-              {editable ? null : (
-                <Text style={styles.note}>Só quem criou o post pode alterar.</Text>
-              )}
+              <View style={styles.authorLine}>
+                <Text style={styles.author}>{item.author}</Text>
+                {editable || deletable ? (
+                  <View style={styles.icons}>
+                    {editable ? (
+                      <IconButton
+                        icon="create-outline"
+                        label={`Editar ${item.title}`}
+                        onPress={() => navigation.navigate('PostEditor', { id: item.id })}
+                      />
+                    ) : null}
+                    {deletable ? (
+                      <IconButton
+                        icon="trash-outline"
+                        color={colors.danger}
+                        label={`Excluir ${item.title}`}
+                        accessibilityHint="Pede confirmação antes de excluir"
+                        loading={deleting === item.id}
+                        onPress={() => confirmDelete(item)}
+                      />
+                    ) : null}
+                  </View>
+                ) : null}
+              </View>
+              {editable ? null : <Text style={styles.note}>Só quem criou o post pode editar.</Text>}
             </View>
           );
         }}
@@ -131,19 +139,40 @@ const styles = StyleSheet.create({
     borderBottomColor: colors.border,
     gap: spacing.xs,
   },
+  // Titulo a esquerda e data a direita, alinhada com a primeira linha do titulo.
+  titleLine: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    gap: spacing.sm,
+  },
   title: {
+    flex: 1,
     color: colors.text,
     fontFamily: fonts.bold,
     fontSize: fontSizes.md + 1,
+    lineHeight: 22,
   },
-  author: {
+  date: {
+    paddingTop: 3,
     color: colors.textSecondary,
     fontFamily: fonts.regular,
     fontSize: fontSizes.sm,
   },
-  actions: { flexDirection: 'row', gap: spacing.sm, marginTop: spacing.sm },
+  authorLine: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  author: {
+    flex: 1,
+    color: colors.textSecondary,
+    fontFamily: fonts.regular,
+    fontSize: fontSizes.sm,
+  },
+  icons: { flexDirection: 'row', gap: spacing.xs },
   note: {
-    marginTop: spacing.xs,
     color: colors.textSecondary,
     fontFamily: fonts.regular,
     fontSize: fontSizes.sm,

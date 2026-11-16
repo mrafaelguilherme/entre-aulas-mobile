@@ -59,11 +59,10 @@ describe('PostEditorScreen', () => {
     expect(mockedCreate).not.toHaveBeenCalled();
   });
 
-  it('the author field is read-only, with the user name when creating', async () => {
+  it('shows the author on the board, with the user name when creating', async () => {
     await renderScreen(PostEditorScreen);
-    const author = screen.getByLabelText('Autor');
-    expect(author).toHaveDisplayValue('Professora Ana Silva');
-    expect(author).toBeDisabled();
+    expect(screen.getByText('Autor: Professora Ana Silva')).toBeOnTheScreen();
+    expect(screen.queryByLabelText('Autor')).not.toBeOnTheScreen();
   });
 
   it('creating sends the trimmed title and content', async () => {
@@ -84,7 +83,7 @@ describe('PostEditorScreen', () => {
     expect(await screen.findByRole('header', { name: 'Editar post' })).toBeOnTheScreen();
     expect(await screen.findByDisplayValue('Função do primeiro grau')).toBeOnTheScreen();
     expect(screen.getByLabelText('Conteúdo')).toHaveDisplayValue('f(x) = ax + b.');
-    expect(screen.getByLabelText('Autor')).toHaveDisplayValue('Professor Carlos Lima');
+    expect(screen.getByText('Autor: Professor Carlos Lima')).toBeOnTheScreen();
     expect(mockedGet).toHaveBeenCalledWith('p2');
 
     await fireEvent.changeText(screen.getByLabelText('Título'), 'Função afim');

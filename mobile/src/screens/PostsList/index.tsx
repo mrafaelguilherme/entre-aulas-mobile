@@ -7,6 +7,7 @@ import { ListState } from '../../components/ListState';
 import { usePaginatedList } from '../../hooks/usePaginatedList';
 import { colors, fonts, fontSizes, radius, spacing, touchTarget } from '../../theme';
 import { Post } from '../../types';
+import { formatShortDate } from '../../utils/dates';
 
 // A tela inicial: lousa com busca e a lista de posts, do mais novo ao mais antigo.
 export function PostsListScreen() {
@@ -99,7 +100,10 @@ function PostRow({ post, onPress }: { post: Post; onPress: () => void }) {
       onPress={onPress}
       style={({ pressed }) => [styles.row, pressed && styles.pressed]}
     >
-      <Text style={styles.title}>{post.title}</Text>
+      <View style={styles.titleLine}>
+        <Text style={styles.title}>{post.title}</Text>
+        <Text style={styles.date}>{formatShortDate(post.createdAt)}</Text>
+      </View>
       <Text style={styles.author}>{post.author}</Text>
       <Text style={styles.excerpt} numberOfLines={3}>
         {post.content}
@@ -122,10 +126,25 @@ const styles = StyleSheet.create({
   content: { paddingHorizontal: spacing.lg, paddingVertical: spacing.sm },
   row: { paddingVertical: spacing.md, gap: spacing.xs },
   pressed: { opacity: 0.7 },
+  // Titulo a esquerda e data a direita, alinhada com a primeira linha do titulo.
+  titleLine: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    gap: spacing.sm,
+  },
   title: {
+    flex: 1,
     color: colors.text,
     fontFamily: fonts.bold,
     fontSize: fontSizes.lg,
+    lineHeight: 24,
+  },
+  date: {
+    paddingTop: 4,
+    color: colors.textSecondary,
+    fontFamily: fonts.regular,
+    fontSize: fontSizes.sm,
   },
   author: {
     color: colors.primary,
