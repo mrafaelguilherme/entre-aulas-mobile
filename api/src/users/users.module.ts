@@ -1,0 +1,24 @@
+import { Module } from '@nestjs/common';
+import { MongooseModule } from '@nestjs/mongoose';
+import { PasswordService } from '../shared/security/password.service';
+import { StudentController } from './controllers/student.controller';
+import { TeacherController } from './controllers/teacher.controller';
+import { UserController } from './controllers/user.controller';
+import { UserMongooseRepository } from './repositories/mongoose/user.mongoose.repository';
+import { UserRepository } from './repositories/user.repository';
+import { User, UserSchema } from './schemas/user.schema';
+import { AccountService } from './services/account.service';
+
+@Module({
+  imports: [
+    MongooseModule.forFeature([{ name: User.name, schema: UserSchema }]),
+  ],
+  controllers: [TeacherController, StudentController, UserController],
+  providers: [
+    { provide: UserRepository, useClass: UserMongooseRepository },
+    PasswordService,
+    AccountService,
+  ],
+  exports: [UserRepository, PasswordService],
+})
+export class UsersModule {}

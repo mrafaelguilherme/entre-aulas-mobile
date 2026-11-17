@@ -1,0 +1,261 @@
+# Entre Aulas API: exemplos de requisicao para a extensao REST Client do VSCode.
+# Clique em "Send Request" acima de cada bloco. Os blocos sao separados por ###.
+# As senhas abaixo sao as de demonstracao do .env.example. Se o seu .env usa
+# outras, troque aqui. Nunca coloque segredo real neste arquivo.
+
+@baseUrl = http://localhost:3000
+@masterEmail = master@entreaulas.com.br
+@masterPassword = master-entre-aulas-2026
+@seedPassword = demo-entre-aulas-2026
+
+### 1. Rotas publicas: ninguem precisa de login para ler
+
+### Listar posts (pagina 1, 20 por pagina; limite maximo 50)
+GET {{baseUrl}}/posts?page=1&limit=20
+
+### Buscar posts por termo (titulo, autor ou conteudo)
+GET {{baseUrl}}/posts/search?term=redação
+
+### Ler um post. Troque o id por um da lista acima.
+GET {{baseUrl}}/posts/COLE_O_ID_DO_POST
+
+### Comentarios de um post
+GET {{baseUrl}}/posts/COLE_O_ID_DO_POST/comments
+
+### 2. Login. O token vale 1 hora e sai so no corpo da resposta.
+
+### Entrar como master
+# @name entrarMaster
+POST {{baseUrl}}/auth/signin
+Content-Type: application/json
+
+{
+  "email": "{{masterEmail}}",
+  "password": "{{masterPassword}}"
+}
+
+### Entrar como a professora Ana
+# @name entrarAna
+POST {{baseUrl}}/auth/signin
+Content-Type: application/json
+
+{
+  "email": "ana@escola.com.br",
+  "password": "{{seedPassword}}"
+}
+
+### Entrar como a aluna Beatriz
+# @name entrarBeatriz
+POST {{baseUrl}}/auth/signin
+Content-Type: application/json
+
+{
+  "email": "beatriz@escola.com.br",
+  "password": "{{seedPassword}}"
+}
+
+### Os tokens abaixo sao lidos das respostas acima. Envie os tres logins antes.
+@masterToken = {{entrarMaster.response.body.$.token}}
+@anaToken = {{entrarAna.response.body.$.token}}
+@beatrizToken = {{entrarBeatriz.response.body.$.token}}
+
+### Quem sou eu
+GET {{baseUrl}}/me
+Authorization: Bearer {{anaToken}}
+
+### Trocar a propria senha (minimo de 15 caracteres). Invalida o token atual.
+PUT {{baseUrl}}/me/password
+Content-Type: application/json
+Authorization: Bearer {{anaToken}}
+
+{
+  "currentPassword": "{{seedPassword}}",
+  "newPassword": "uma-senha-nova-com-15-ou-mais"
+}
+
+### Sair: o token deixa de valer na hora
+POST {{baseUrl}}/auth/signout
+Authorization: Bearer {{anaToken}}
+
+### 3. Posts: professor e master criam; so quem criou edita; quem criou ou o master exclui
+
+### Criar post como Ana (sem autor nem data no corpo: a API preenche pelo token)
+POST {{baseUrl}}/posts
+Content-Type: application/json
+Authorization: Bearer {{anaToken}}
+
+{
+  "title": "Post criado pelo requests.http",
+  "content": "Conteúdo de exemplo, com no máximo 20000 caracteres."
+}
+
+### Editar post. Troque o id por um post da Ana.
+PUT {{baseUrl}}/posts/COLE_O_ID_DO_POST
+Content-Type: application/json
+Authorization: Bearer {{anaToken}}
+
+{
+  "title": "Título editado"
+}
+
+### Excluir post (remove os comentarios dele)
+DELETE {{baseUrl}}/posts/COLE_O_ID_DO_POST
+Authorization: Bearer {{anaToken}}
+
+### 4. Comentarios: qualquer pessoa logada comenta; o autor, um professor ou o master apaga
+
+### Comentar como Beatriz (limite de 10 por minuto por IP)
+POST {{baseUrl}}/posts/COLE_O_ID_DO_POST/comments
+Content-Type: application/json
+Authorization: Bearer {{beatrizToken}}
+
+{
+  "content": "Comentário de exemplo, com no máximo 1000 caracteres."
+}
+
+### Apagar comentario
+DELETE {{baseUrl}}/comments/COLE_O_ID_DO_COMENTARIO
+Authorization: Bearer {{beatrizToken}}
+
+### 5. Professores: professor convida (pendente); master cadastra direto, aceita, recusa e exclui
+
+### Listar professores (pendentes primeiro). Filtro opcional: ?status=pending
+GET {{baseUrl}}/teachers
+Authorization: Bearer {{anaToken}}
+
+### Convidar um professor como Ana (nasce pendente, sem login ate o master aceitar)
+POST {{baseUrl}}/teachers
+Content-Type: application/json
+Authorization: Bearer {{anaToken}}
+
+{
+  "name": "Professor Convidado",
+  "email": "convidado@escola.com.br",
+  "password": "senha-provisoria-do-convidado"
+}
+
+### Aceitar o convite (so o master)
+POST {{baseUrl}}/teachers/COLE_O_ID_DO_PROFESSOR/approve
+Authorization: Bearer {{masterToken}}
+
+### Recusar o convite (so o master; apaga o cadastro)
+POST {{baseUrl}}/teachers/COLE_O_ID_DO_PROFESSOR/reject
+Authorization: Bearer {{masterToken}}
+
+### Editar professor (o master, ou o proprio cadastro). So nome e e-mail.
+PUT {{baseUrl}}/teachers/COLE_O_ID_DO_PROFESSOR
+Content-Type: application/json
+Authorization: Bearer {{masterToken}}
+
+{
+  "name": "Nome Atualizado"
+}
+
+### Excluir professor (so o master; exclusao logica; o master nao exclui a si mesmo)
+DELETE {{baseUrl}}/teachers/COLE_O_ID_DO_PROFESSOR
+Authorization: Bearer {{masterToken}}
+
+### 6. Alunos: professor e master fazem tudo, menos mexer na senha
+
+### Listar alunos
+GET {{baseUrl}}/students
+Authorization: Bearer {{anaToken}}
+
+### Cadastrar aluno (nasce ativo, com troca de senha obrigatoria no primeiro acesso)
+POST {{baseUrl}}/students
+Content-Type: application/json
+Authorization: Bearer {{anaToken}}
+
+{
+  "name": "Aluno Novo",
+  "email": "aluno.novo@escola.com.br",
+  "password": "senha-provisoria-do-aluno"
+}
+
+### Editar aluno
+PUT {{baseUrl}}/students/COLE_O_ID_DO_ALUNO
+Content-Type: application/json
+Authorization: Bearer {{anaToken}}
+
+{
+  "email": "aluno.renomeado@escola.com.br"
+}
+
+### Excluir aluno (exclusao logica; so o master restaura)
+DELETE {{baseUrl}}/students/COLE_O_ID_DO_ALUNO
+Authorization: Bearer {{anaToken}}
+
+### 7. Contas: so o master
+
+### Contas excluidas
+GET {{baseUrl}}/users/deleted
+Authorization: Bearer {{masterToken}}
+
+### Restaurar uma conta
+POST {{baseUrl}}/users/COLE_O_ID_DA_CONTA/restore
+Authorization: Bearer {{masterToken}}
+
+### Redefinir a senha de outra pessoa (ela troca no proximo login)
+POST {{baseUrl}}/users/COLE_O_ID_DA_CONTA/reset-password
+Content-Type: application/json
+Authorization: Bearer {{masterToken}}
+
+{
+  "password": "senha-provisoria-redefinida"
+}
+
+### 8. Ataques bloqueados. Cada um devolve o erro indicado.
+
+### Campo extra no corpo (role): 400 "Validation failed". Nenhum perfil vem do cliente.
+POST {{baseUrl}}/students
+Content-Type: application/json
+Authorization: Bearer {{anaToken}}
+
+{
+  "name": "Tentativa",
+  "email": "tentativa@escola.com.br",
+  "password": "senha-com-15-caracteres",
+  "role": "master"
+}
+
+### Aluna cria post: 403. A rota exige professor ou master.
+POST {{baseUrl}}/posts
+Content-Type: application/json
+Authorization: Bearer {{beatrizToken}}
+
+{
+  "title": "Não pode",
+  "content": "Aluno só lê e comenta."
+}
+
+### Ana edita um post do Carlos: 403. So quem criou edita.
+PUT {{baseUrl}}/posts/COLE_O_ID_DE_UM_POST_DO_CARLOS
+Content-Type: application/json
+Authorization: Bearer {{anaToken}}
+
+{
+  "title": "Tentativa de editar o post de outro professor"
+}
+
+### Professora alcanca o master pela rota de alunos: 404. A consulta filtra o perfil.
+GET {{baseUrl}}/students/COLE_O_ID_DO_MASTER
+Authorization: Bearer {{anaToken}}
+
+### Senha errada: 401 generico, igual para e-mail inexistente, conta pendente ou excluida.
+POST {{baseUrl}}/auth/signin
+Content-Type: application/json
+
+{
+  "email": "ana@escola.com.br",
+  "password": "senha-errada-mas-longa"
+}
+
+### Token depois de sair: 401. Envie "Sair" acima e repita este.
+GET {{baseUrl}}/me
+Authorization: Bearer {{anaToken}}
+
+### Sem token em rota protegida: 401
+GET {{baseUrl}}/teachers
+
+### Id invalido: 404, sem consultar o banco
+GET {{baseUrl}}/posts/nao-e-um-id
