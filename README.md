@@ -276,22 +276,28 @@ Os detalhes, com os arquivos e os testes de cada item, estão em [docs/DOCUMENTA
 | `scripts/` (`node --test`) | 3 testes | Geração do `.env` |
 
 ```powershell
-# API
+# API (a partir da pasta do projeto)
 cd api
+npm ci              # só na primeira vez
 npm test            # unitários
 npm run test:cov    # com cobertura; os limites reprovam o build (40% linhas, 60% decisões)
 npm run test:e2e    # ponta a ponta
 npm run lint
+cd ..
 
-# App
+# App (a partir da pasta do projeto)
 cd mobile
+npm ci              # só na primeira vez; já feito em "Como rodar"
 npm test
 npm run typecheck
 npm run lint
+cd ..
 
-# Scripts (pasta do projeto)
+# Scripts (na pasta do projeto)
 node --test "scripts/*.test.mjs"
 ```
+
+O `npm ci` da pasta `api` também serve para abrir o código da API no VSCode sem avisos de módulo não encontrado. A API em si roda no Docker, que instala as dependências dentro da imagem.
 
 A cobertura unitária da API fica em 44% das linhas e 70% das decisões. O número é baixo de propósito: a regra de negócio é coberta pelos testes de ponta a ponta, que exercitam guards, pipes e banco de verdade, em vez de dublês.
 
