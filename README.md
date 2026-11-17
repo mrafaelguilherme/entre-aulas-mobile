@@ -308,7 +308,7 @@ A cobertura unitária da API fica em 44% das linhas e 70% das decisões. O núme
 | **Scripts** | `node --test "scripts/*.test.mjs"` | Sim |
 | **Docker** | Gera o `.env`, constrói a imagem da API e, em push na `main`, publica no Docker Hub | Sim |
 
-A publicação usa os segredos `DOCKERHUB_USERNAME` e `DOCKERHUB_TOKEN` do repositório. Sem eles, o trabalho só constrói a imagem. A imagem publicada se chama `<usuario>/entre-aulas-api:latest`.
+A publicação usa os segredos `DOCKERHUB_USERNAME` e `DOCKERHUB_TOKEN` do repositório. Sem eles, o trabalho só constrói a imagem. A imagem publicada se chama `mrafaelguilherme/entre-aulas-api:latest`.
 
 O Dependabot abre um PR por semana para cada pasta (`api`, `mobile` e as actions), agrupando as atualizações. Versões maiores do TypeScript, dos tipos do Node, do React e do React Native ficam de fora, porque exigem migração manual.
 
